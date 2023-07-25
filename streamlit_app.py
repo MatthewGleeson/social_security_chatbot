@@ -8,7 +8,6 @@ import json
 import os
 import pandas as pd
 import re
-from tqdm.auto import tqdm
 from typing import List, Union
 import zipfile
 
