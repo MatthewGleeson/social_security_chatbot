@@ -170,6 +170,8 @@ agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, ve
 
 form = st.form(key='my-form')
 chatbot_query = form.text_area('Ask the Social Security Chatbot a question!')
+
+st.write("Example question: I have a child with down syndrome. What do I need to know to determine if he qualifies for social security?")
 chatbot_access_token = form.text_input('Access Token for the chatbot')
 submit = form.form_submit_button('Submit')
 
