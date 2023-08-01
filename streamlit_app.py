@@ -169,7 +169,7 @@ agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, ve
 
 
 form = st.form(key='my-form')
-chatbot_query = form.text_input('Ask the Social Security Chatbot a question!')
+chatbot_query = form.text_area('Ask the Social Security Chatbot a question!')
 chatbot_access_token = form.text_input('Access Token for the chatbot')
 submit = form.form_submit_button('Submit')
 
@@ -184,4 +184,4 @@ if submit:
         else:
             output = agent_executor.run(chatbot_query)
             st.markdown("Chatbot response")
-            st.markdown(f"**:blue[Chatbot response]:** {output}")
+            st.success(f"**:blue[Chatbot response]:** {output}")
