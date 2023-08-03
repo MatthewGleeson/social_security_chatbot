@@ -38,7 +38,6 @@ index_name = "social-security"
 index = pinecone.Index(index_name=index_name)
 
 
-
 # Configuring the embeddings to be used by our retriever to be OpenAI Embeddings, matching our embedded corpus
 embeddings = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -47,7 +46,7 @@ embeddings = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
 docsearch = Pinecone.from_existing_index(index_name,embeddings,text_key='text_chunk')
 retriever = docsearch.as_retriever()
 retrieval_llm = OpenAI(temperature=0,openai_api_key=os.getenv("OPENAI_API_KEY"))
-social_security_retriever = RetrievalQA.from_chain_type(llm=retrieval_llm, chain_type="stuff", retriever=docsearch.as_retriever())
+social_security_retriever = RetrievalQA.from_chain_type(llm=retrieval_llm, chain_type="stuff", retriever=docsearch.as_retriever(), return_source_documents=True)
 
 # Set up the prompt with input variables for tools, user input and a scratchpad for the model to record its workings
 template = """Answer the following questions as best you can, speaking as if you are a nurse with extensive medical knowledge giving advice to a patient. You have access to the following tools:
@@ -72,19 +71,45 @@ Question: {input}
 
 #right now we only have a single tool which is the vector database
 
+#right now we only have a single tool which is the vector database
+from langchain.tools import BaseTool
+
+from typing import Optional, Type
+
+from langchain.callbacks.manager import (
+    AsyncCallbackManagerForToolRun,
+    CallbackManagerForToolRun,
+)
+
+class KnowledgeBaseWithSources(BaseTool):
+    name = "Knowledge Base"
+    description= "Useful for getting answers for social security-related questions, as well as information on diseases that qualify for social security. Input should be a fully formed question."
+    def _run(
+        self, query: str, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        """Use the tool."""
+
+        response = social_security_retriever({"query": query})
+        print(str(response))
+        returned_links.append(response["source_documents"])
+        return response["result"]
+    
+    async def _arun(
+        self, query: str, run_manager: Optional[AsyncCallbackManagerForToolRun] = None
+    ) -> str:
+        """Use the tool asynchronously."""
+        raise NotImplementedError("custom_search does not support async")
+
+
 tools = [
-    Tool(
-        name = 'Knowledge Base',
-        func=social_security_retriever.run,
-        description="Useful for getting answers for social security-related questions, as well as information on diseases that qualify for social security. Input should be a fully formed question."
-    )
+    KnowledgeBaseWithSources(),
 ]
 
 class CustomPromptTemplate(BaseChatPromptTemplate):
     # The template to use
     template: str
     # The list of tools available
-    tools: List[Tool]
+    tools: List[BaseTool]
 
     def format_messages(self, **kwargs) -> str:
         # Get the intermediate steps (AgentAction, Observation tuples)
@@ -178,6 +203,7 @@ submit = form.form_submit_button('Submit')
 offline_testing = False
 
 if submit:
+    returned_links = []
     if chatbot_access_token!= os.getenv("CHATBOT_ACCESS_TOKEN"):
         st.write("Sorry, you have provided an invalid access token. Please check it is correct and try again, or reach out to the creator to get access")
     else:
@@ -185,5 +211,5 @@ if submit:
             st.write(chatbot_query)
         else:
             output = agent_executor.run(chatbot_query)
-            st.markdown("Chatbot response")
             st.success(f"**:blue[Chatbot response]:** {output}")
+            st.info(f"I read this document to create my response: {returned_links[0][0].metadata['url']}")
