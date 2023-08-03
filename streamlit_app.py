@@ -212,4 +212,5 @@ if submit:
         else:
             output = agent_executor.run(chatbot_query)
             st.success(f"**:blue[Chatbot response]:** {output}")
-            st.info(f"I read this document to create my response: {returned_links[0][0].metadata['url']}")
+            if len(returned_links)>0:
+                st.info(f"I read this document to create my response: {returned_links[0][0].metadata['url']}")
